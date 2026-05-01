@@ -1,0 +1,2226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบขอใช้รถ</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2D1B69">
+
+    <link rel="apple-touch-icon" href="https://i.ibb.co/KzB8sWy7/car-rental.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://i.ibb.co/KzB8sWy7/car-rental.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="https://i.ibb.co/KzB8sWy7/car-rental.png">
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    
+    <style>
+    /* --- Base & Layout --- */
+    :root {
+        --primary-color: #0066CC;
+        --primary-light: #0080FF;
+        --primary-dark: #004499;
+        --gradient-start: #001a4d;
+        --gradient-mid: #003d99;
+        --gradient-end: #0066CC;
+        --accent-blue: #00A8E8;
+        --light-bg: #E8F4F8;
+        --text-light: #FFFFFF;
+        --text-dark: #E8F0F7;
+        --green: #00C896;
+        --red: #FF4757;
+        --shadow: 0 8px 24px rgba(0, 26, 77, 0.25);
+    }
+    
+    body {
+        font-family: 'Prompt', sans-serif;
+        background: #2D1B69;
+        color: var(--text-light);
+        margin: 0;
+        min-height: 100vh;
+    }
+    
+    main {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    @media screen and (min-width: 601px) {
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+    }
+    
+    button {
+        cursor: pointer;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #5B61E8 0%, #7C3AED 100%);
+        color: white;
+        font-family: 'Prompt';
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+    }
+    
+    button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(124, 58, 237, 0.6);
+        background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+    }
+    
+    button.secondary {
+        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    button.secondary:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%);
+        border-color: rgba(255,255,255,0.5);
+    }
+    
+    hr {
+        border-color: rgba(255,255,255,0.1);
+        margin: 2rem 0;
+    }
+
+    /* --- [NEW CAR LOADING PROGRESS BAR - YELLOW CAR] --- */
+    #loading-overlay {
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(30, 27, 75, 0.98);
+        z-index: 10000;
+        color: white;
+        text-align: center;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(10px);
+    }
+
+    .loading-wrapper {
+        position: relative;
+        width: 280px;
+        padding: 20px;
+    }
+
+    
+    /* รูปรถสีเหลืองหันหน้าขวา */
+    .car-yellow {
+        width: 80px;
+        height: auto;
+        position: absolute;
+        /* แก้ไขเพื่อให้รถขยับลงมาใกล้แถบมากขึ้น top: -10px */
+        top: -10px; 
+        left: 0;
+        transform: translateX(-50%);
+        animation: carMoveProgress 6.0s infinite linear;
+        z-index: 2;
+    }
+
+    /* แถบ Progress Bar (กรอบนอก) */
+    .progress-track {
+        width: 100%;
+        height: 18px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid #FFFFFF;
+        border-radius: 20px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* แถบสีเหลืองด้านใน */
+    .progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #FBBF24, #F59E0B);
+        border-radius: 20px;
+        animation: fillProgressMove 6.0s infinite linear;
+    }
+
+    /* แอนิเมชันรถวิ่งจากซ้ายไปขวา */
+    @keyframes carMoveProgress {
+        0% { left: 0%; }
+        100% { left: 100%; }
+    }
+
+    /* แอนิเมชันแถบสีวิ่งตามรถ */
+    @keyframes fillProgressMove {
+        0% { width: 0%; }
+        100% { width: 100%; }
+    }
+    
+    #loading-overlay p {
+        margin-top: 30px;
+        font-size: 1.2rem;
+        font-weight: 500;
+        letter-spacing: 1.5px;
+        color: #FBBF24;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* --- Login --- */
+    #login-container {
+        display: none;
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .login-card {
+        background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(185, 28, 28, 0.95) 100%);
+        padding: 2rem;
+        padding-top: 4rem;
+        border-radius: 16px;
+        width: 350px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(255,255,255,0.15);
+        backdrop-filter: blur(10px);
+        position: relative;
+    }
+    
+    .login-card h1 {
+        text-align: center;
+        margin-bottom: 1.5rem;
+        color: white;
+    }
+    
+    .form-field {
+        margin-bottom: 1rem;
+    }
+    
+    .form-field input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.1);
+        color: white;
+        font-size: 1rem;
+        box-sizing: border-box;
+    }
+    
+    .form-field input::placeholder {
+        color: rgba(255,255,255,0.6);
+    }
+    
+    .remember-me {
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.9);
+    }
+    
+    .remember-me input {
+        margin-right: 8px;
+    }
+    
+    .login-card button {
+        width: 100%;
+        background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%) !important;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5) !important;
+    }
+
+    .login-card button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.7) !important;
+        background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+    }
+    
+    .login-card a {
+        display: block;
+        text-align: center;
+        margin-top: 1rem;
+        color: #E8F4F8;
+        text-decoration: none;
+    }
+
+    /* --- App Header --- */
+    #app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, rgba(91,97,232,0.15) 0%, rgba(124,58,237,0.1) 100%);
+        padding: 1.2rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 4px 16px rgba(124, 58, 237, 0.15);
+    }
+    
+    .logo {
+        display: flex;
+        align-items: center;
+    }
+    
+    .logo img {
+        height: 40px;
+        margin-right: 3px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+    
+    .logo h1 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    
+    .user-menu {
+        display: flex;
+        align-items: center;
+    }
+    
+    .user-menu span {
+        margin-right: 10px;
+    }
+    
+    .user-menu i {
+        font-size: 1.5rem;
+        margin-right: 10px;
+    }
+
+    /* --- Dashboard & Vehicle Cards --- */
+    .dashboard h2 {
+        border-bottom: 2px solid rgba(255,255,255,0.2);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        color: white;
+    }
+    
+    .vehicle-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .vehicle-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        padding: 0 !important; 
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border-radius: 12px;
+        position: relative;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255,255,255,0.2);
+        backdrop-filter: blur(10px);
+    }
+    
+    .vehicle-image-container {
+        width: 100%;
+        height: 150px; 
+        background-color: #eee;
+        position: relative;
+    }
+
+    .vehicle-image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; 
+    }
+
+    .vehicle-content {
+        padding: 1.5rem;
+    }
+
+    .vehicle-card.available:hover {
+        transform: translateY(-8px);
+        cursor: pointer;
+        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%);
+        box-shadow: 0 12px 28px rgba(124, 58, 237, 0.35);
+    }
+    
+    .vehicle-card.unavailable {
+        opacity: 0.6;
+    }
+    
+    .vehicle-card h3 {
+        margin-top: 0;
+        color: white;
+    }
+    
+    .fuel-indicator {
+        height: 10px;
+        background: rgba(0,0,0,0.2);
+        border-radius: 5px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+    
+    .fuel-level {
+        height: 100%;
+        background: linear-gradient(90deg, #EF4444, #FBBF24, #10B981);
+    }
+    
+    .status-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: #10B981;
+        color: white;
+    }
+    
+    .unavailable .status-badge {
+        background: linear-gradient(135deg, rgba(255,71,87,0.8) 0%, rgba(255,71,87,0.6) 100%);
+    }
+    
+    .vehicle-card button {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    /* --- Forms --- */
+    .form-container, .return-container, .summary-container {
+        background: linear-gradient(135deg, rgba(91,97,232,0.15) 0%, rgba(124,58,237,0.1) 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        max-width: 600px;
+        margin: 2rem auto;
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 8px 24px rgba(124, 58, 237, 0.2);
+    }
+    
+    .form-container h2, .return-container h2 {
+        color: white;
+    }
+    
+    .form-field input,
+    .form-field select {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 10px 12px;
+        font-size: 0.95rem;
+    }
+    
+    .form-field select {
+        background: linear-gradient(135deg, rgba(147, 197, 253, 0.15) 0%, rgba(191, 219, 254, 0.1) 100%);
+        border: 1px solid rgba(147, 197, 253, 0.3);
+    }
+    
+    .form-field select option {
+        background: #2D1B69;
+        color: white;
+    }
+    
+    .form-field select {
+        padding: 12px 15px;
+        border-radius: 10px;
+        border: 2px solid rgba(147, 197, 253, 0.4);
+        background: linear-gradient(135deg, rgba(100, 116, 255, 0.2) 0%, rgba(147, 197, 253, 0.15) 100%);
+        box-shadow: inset 0 2px 8px rgba(147, 197, 253, 0.2);
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(8px);
+    }
+    
+    .form-field input::placeholder {
+        color: rgba(255,255,255,0.5);
+    }
+    
+    .input-with-button {
+        display: flex;
+    }
+    
+    .input-with-button input {
+        flex-grow: 1;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    
+    .input-with-button button {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+    
+    .btn-edit {
+        background: linear-gradient(135deg, #F87171 0%, #EF4444 100%) !important;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+    }
+    
+    .btn-edit:hover {
+        background: linear-gradient(135deg, #FCA5A5 0%, #F87171 100%) !important;
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6) !important;
+    }
+    
+    .form-actions {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+    
+    .btn-submit {
+        background: linear-gradient(135deg, #34D399 0%, #10B981 100%) !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+    }
+    
+    .btn-submit:hover {
+        background: linear-gradient(135deg, #6EE7B7 0%, #34D399 100%) !important;
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6) !important;
+    }
+    
+    .btn-logout {
+        background: linear-gradient(135deg, #FF6B6B 0%, #EE5A52 100%) !important;
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4) !important;
+    }
+    
+    .btn-logout:hover {
+        background: linear-gradient(135deg, #FF8787 0%, #FF6B6B 100%) !important;
+        box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6) !important;
+    }
+    
+    .range-slider {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    input[type=range] {
+        -webkit-appearance: none;
+        appearance: none;
+        flex-grow: 1;
+        height: 12px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 6px;
+        outline: none;
+        cursor: pointer;
+        touch-action: none;
+    }
+    
+    input[type=range]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 12px;
+        cursor: pointer;
+        background: linear-gradient(to right, var(--red), #FFD700, var(--green));
+        border-radius: 6px;
+    }
+    
+    input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: white;
+        cursor: pointer;
+        margin-top: -6px;
+        box-shadow: 0 0 8px rgba(0, 102, 204, 0.5);
+    }
+    
+    input[type=range]::-moz-range-track {
+        width: 100%;
+        height: 12px;
+        cursor: pointer;
+        background: linear-gradient(to right, var(--red), #FFD700, var(--green));
+        border-radius: 6px;
+    }
+    
+    input[type=range]::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: white;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 0 8px rgba(0, 102, 204, 0.5);
+    }
+    
+    .summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        background-color: rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        border-radius: 8px;
+    }
+    
+    .summary-grid div {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .summary-grid label {
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.7);
+        margin-bottom: 0.25rem;
+    }
+    
+    .summary-grid span {
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+    
+    .summary-grid .total {
+        grid-column: 1 / -1;
+        text-align: center;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+        padding: 1rem;
+        border-radius: 5px;
+    }
+    
+    .summary-grid .total span {
+        font-size: 1.5rem;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .dashboard-error {
+        text-align: center;
+        background: linear-gradient(135deg, rgba(255,71,87,0.15) 0%, rgba(255,71,87,0.1) 100%);
+        padding: 2rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255,71,87,0.3);
+    }
+
+    .report-menu-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .report-btn {
+        background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+        margin-right: 10px;
+    }
+
+    .report-btn:hover {
+        background: linear-gradient(135deg, #FCD34D 0%, #FBBF24 100%);
+    }
+
+    .dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: linear-gradient(135deg, rgba(91,97,232,0.95) 0%, rgba(124,58,237,0.9) 100%);
+        min-width: 250px;
+        box-shadow: var(--shadow);
+        border-radius: 12px;
+        margin-top: 8px;
+        z-index: 1000;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+    .dropdown-item {
+        padding: 12px 20px;
+        cursor: pointer;
+        color: white;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+        background: rgba(255,255,255,0.15);
+    }
+
+    .dropdown-item i {
+        margin-right: 10px;
+        width: 20px;
+    }
+
+    .report-container {
+        background: linear-gradient(135deg, rgba(0,102,204,0.15) 0%, rgba(0,128,255,0.1) 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        margin: 2rem auto;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .report-filters {
+        background: rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-row .form-field:nth-child(4) {
+        grid-column: 3;
+        margin-top: 1rem;
+    }
+    
+    .form-field {
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .form-field label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+        color: rgba(255,255,255,0.9);
+        font-weight: 500;
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: rgba(0,0,0,0.05);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .report-table th {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 500;
+    }
+
+    .report-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .report-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .report-table tr:hover {
+        background-color: rgba(255,255,255,0.05);
+    }
+
+    .report-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+    }
+
+    .print-btn {
+        background: linear-gradient(135deg, var(--green) 0%, #00B87D 100%);
+    }
+
+    .print-btn:hover {
+        background: linear-gradient(135deg, #00D9A3 0%, #00C896 100%);
+    }
+
+    .pdf-btn {
+        background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+    }
+    .pdf-btn:hover {
+        background: linear-gradient(135deg, #F87171 0%, #EF4444 100%);
+        box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+        transform: translateY(-2px);
+    }
+
+    .permit-card {
+        background: white;
+        color: #333;
+        padding: 2rem;
+        border-radius: 8px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .permit-header {
+        text-align: center;
+        border-bottom: 2px solid #333;
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .permit-body {
+        line-height: 2;
+    }
+
+    .signature-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 3rem;
+        text-align: center;
+    }
+
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .report-container, .report-container * {
+            visibility: visible;
+        }
+        .report-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .report-filters, .report-actions, #app-header {
+            display: none !important;
+        }
+    }
+
+    @media screen and (max-width: 600px) {
+        body, p, span, label {
+            font-size: 16px;
+        }
+
+        h1 { font-size: 1.6rem; }
+        h2 { font-size: 1.4rem; }
+        h3 { font-size: 1.2rem; }
+
+        main {
+            padding: 0.5rem;
+        }
+
+        #app-header, .form-container, .return-container, .card, .report-container {
+            padding: 1rem;
+        }
+
+        button {
+            padding: 14px 18px;
+            font-size: 1rem;
+        }
+        
+        .login-card {
+            width: 90%;
+        }
+
+        #app-header {
+            justify-content: flex-end;
+            padding: 0.8rem 0.5rem;
+        }
+
+        #app-header h1 {
+            font-size: 1.2rem;
+        }
+
+        .logo {
+            display: none;
+        }
+
+        .logo img {
+            display: none;
+        }
+
+        #report-menu-desktop {
+            display: none;
+        }
+
+        /* เพิ่มเติม: ปรับช่องไฟในเมนูผู้ใช้งานบนมือถือให้ขยับไปทางซ้ายอีกนิด */
+        .user-menu {
+        gap: 5px;
+        justify-content: flex-end;
+        flex-wrap: nowrap;      /* ป้องกันเมนูตกบรรทัด */
+        }
+
+        #user_log {
+        font-size: 0.8rem;      /* ปรับตัวอักษรให้เล็กลงเล็กน้อย */
+        margin-right: 5px;
+        max-width: none;        /* ยกเลิกการจำกัดความกว้างเพื่อให้โชว์ชื่อเต็ม */
+        overflow: visible;      /* ให้แสดงตัวอักษรทั้งหมด */
+        white-space: nowrap;    /* ไม่ให้ชื่อตัดบรรทัด */
+        }
+
+        .btn-logout {
+            font-size: 0.85rem;
+            padding: 8px 12px;
+        }
+
+        .user-menu i.fa-user-circle {
+            font-size: 1.2rem;
+            margin-right: 5px;
+        }
+    }
+
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.show {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-content {
+        background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(185, 28, 28, 0.95) 100%); 
+        padding: 2rem;
+        border-radius: 16px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .modal-content h3 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        color: white;
+        text-align: center;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .modal-actions button {
+        flex: 1;
+    }
+
+    .modern-spinner-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 3000;
+        backdrop-filter: blur(8px);
+    }
+
+    .modern-spinner-overlay.show {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .spinner-container {
+        text-align: center;
+    }
+
+    .modern-spinner {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        position: relative;
+    }
+
+    .modern-spinner .spinner-ring {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border: 4px solid transparent;
+        border-top-color: #EC4899;
+        border-radius: 50%;
+        animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+    }
+
+    .modern-spinner .spinner-ring:nth-child(2) {
+        border-top-color: #7C3AED;
+        animation-delay: -0.5s;
+    }
+
+    .modern-spinner .spinner-ring:nth-child(3) {
+        border-top-color: #3B82F6;
+        animation-delay: -1s;
+    }
+
+    .spinner-text {
+        color: white;
+        font-size: 1.2rem;
+        font-weight: 500;
+        margin-top: 10px;
+    }
+
+    .spinner-subtext {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    input[type="time"] {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 10px 12px;
+        font-size: 1rem;
+        border-radius: 8px;
+    }
+
+    input[type="time"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+    }
+
+
+    /* --- เอฟเฟกต์แจ้งเตือนเมื่อน้ำมันต่ำกว่า 20% --- */
+/* --- เอฟเฟกต์แจ้งเตือนน้ำมันต่ำ --- */
+@keyframes fuel-danger-glow {
+    0% { box-shadow: 0 0 5px rgba(255, 71, 87, 0.5); border-color: rgba(255, 71, 87, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(255, 71, 87, 0.9); border-color: #FF4757; }
+    100% { box-shadow: 0 0 5px rgba(255, 71, 87, 0.5); border-color: rgba(255, 71, 87, 0.5); }
+}
+
+.low-fuel-card {
+    border: 2px solid #FF4757 !important;
+    animation: fuel-danger-glow 1.5s infinite ease-in-out;
+}
+
+.low-fuel-text {
+    color: #FF4757 !important;
+    font-weight: bold;
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    50% { opacity: 0.3; }
+}
+
+
+/* --- แถบแสดงชื่อผู้ใช้บนรูปภาพรถ --- */
+.user-on-image {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    color: #00FFC2;
+    padding: 7px 10px;
+    font-size: 0.9rem;
+    text-align: center;
+    font-weight: 500;
+    z-index: 2;
+}
+.user-on-image i { margin-right: 6px; }
+
+
+/* แอนิเมชันสำหรับหมุนวงกลม */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+/* สไตล์สำหรับ Badge แจ้งเตือนวันหมดอายุ */
+/* 1. ปรับขนาดมาตรฐานให้เล็กลงและกระชับขึ้น */
+.expiration-badge {
+    position: absolute;
+    top: 5px;   /* ขยับขึ้นไปชิดขอบอีกนิด */
+    left: 5px;  /* ขยับไปชิดซ้ายอีกนิด */
+    background: rgba(0, 0, 0, 0.65); /* จางลงเล็กน้อยเพื่อให้ดูโปร่ง */
+    backdrop-filter: blur(4px);
+    color: white;
+    padding: 3px 6px; /* ลดพื้นที่ว่างรอบตัวอักษร */
+    border-radius: 6px;
+    font-size: 0.65rem; /* ขนาดตัวอักษรเล็กลง */
+    z-index: 5;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    line-height: 1.1; /* ลดระยะห่างระหว่างบรรทัด */
+}
+
+/* 2. เพิ่ม Media Query เพื่อคุมขนาดบนมือถือโดยเฉพาะ */
+@media screen and (max-width: 600px) {
+    .expiration-badge {
+        font-size: 0.65rem; /* ขนาดจิ๋วสำหรับมือถือ */
+        padding: 2px 4px;
+        top: 3px;
+        left: 3px;
+    }
+    
+    /* คุมขนาดเฉพาะหัวข้อ ภาษีรถ และ ประกันภัย */
+.exp-label { 
+    color: #FBBF24; 
+    font-weight: bold; 
+    margin-right: 3px;
+    font-size: 0.55rem; /* ปรับลดตัวเลขนี้เพื่อให้หัวข้อเล็กลง (เดิมอาจจะเท่ากับตัวเลข) */
+}
+
+/* ปรับขนาดวันที่ (ถ้าต้องการให้ใหญ่กว่าหัวข้อเล็กน้อยเพื่อให้เน้นข้อมูล) */
+.exp-date {
+    font-size: 0.55rem; 
+    color: #FFFFFF;
+}
+}
+
+
+    </style>
+</head>
+<body>
+
+   <div id="loading-overlay" style="display: flex;">
+        <div class="loading-wrapper">
+            <img src="https://img2.pic.in.th/car984c8a0251c52e14.png" class="car-yellow" alt="Loading Car">
+            <div class="progress-track">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+        <p id="loading-text">กำลังโหลดระบบ...</p>
+    </div>
+
+    <?!= include('login') ?>
+
+    <main id="app-container" style="display: none;">
+        <header id="app-header">
+            <div class="logo">
+                <img src="https://i.ibb.co/0p3d1N9k/PNGV2.png" alt="Logo">
+                <h1>ระบบขอใช้รถ</h1>
+            </div>
+            <div class="user-menu">
+                <span id="user_log"></span>
+                <i class="fa fa-user-circle"></i>
+                <div class="report-menu-container" id="report-menu-desktop">
+                    <button class="report-btn" onclick="toggleReportMenu()">
+                        <i class="fa fa-file-text"></i> รายงานการใช้รถ
+                    </button>
+                    <div id="report-dropdown" class="dropdown-menu">
+                        <div class="dropdown-item" onclick="showUsageReport()">
+                            <i class="fa fa-print"></i> พิมพ์บันทึกการใช้รถยนต์
+                        </div>
+                        <div class="dropdown-item" onclick="showPermitReport()">
+                            <i class="fa fa-id-card"></i> พิมพ์ใบอนุญาตใช้รถส่วนกลาง
+                        </div>
+                        <div class="dropdown-item" onclick="showVehicleSettings()">
+                        <i class="fa fa-cog"></i> ตั้งค่าวันหมดอายุ ภาษีรถ/ประกัน
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+            </div>
+        </header>
+
+        <div id="view-container"></div>
+        <footer style="text-align: center; padding: 2rem 0 1rem 0; color: rgba(255,255,255,0.4); font-size: 0.8rem;">
+            <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 1.5rem; width: 50%; margin-left: auto; margin-right: auto;">
+            พัฒนาระบบโดย นายมนตรี ปัญญา <span style="color: #FBBF24;">[ทีมงานขอบตาดำ]</span>
+        </footer>
+    </main>
+
+    <script>
+        let currentUser = null;
+        let vehicleData = [];
+        let appUrl = '';
+        let isFuelRiskAccepted = false;
+
+        function startloader(text = "กำลังประมวลผล...") {
+            $('#loading-text').text(text);
+            $('#loading-overlay').css('display', 'flex').fadeIn(100);
+        }
+
+        function endloader() {
+            $('#loading-overlay').fadeOut(100);
+        }
+
+        function logout() {
+            localStorage.removeItem('rememberedIdCard');
+            Swal.fire({
+                title: 'ออกจากระบบสำเร็จ',
+                text: 'คุณได้ออกจากระบบเรียบร้อยแล้ว',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                if (appUrl) { 
+                    window.top.location.href = appUrl; 
+                } else { 
+                    location.reload();
+                }
+            });
+        }
+
+        function afterLoginSuccess(userData) {
+    // กรณีรับเป็น username (string) จากการรีเฟรชหน้า
+    if (typeof userData === 'string') {
+        $('#user_log').text(currentUser.fullName);
+    } else {
+        // กรณีรับเป็น Object จากการ Login ครั้งแรก
+        currentUser = {
+            username: userData[0],
+            fullName: userData[2],
+            position: userData[3],
+            idCard: userData[4]
+        };
+        $('#user_log').text(currentUser.fullName);
+    }
+
+    $('#login-container').hide();
+    $('#app-container').show();
+    
+    startloader(`ขอต้อนรับ ${currentUser.fullName} เข้าสู่ระบบ...`);
+    google.script.run
+        .withSuccessHandler(function(initialData) {
+            endloader();
+            if (!initialData || initialData.error) {
+                Swal.fire({
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถโหลดข้อมูลได้: ' + (initialData ? initialData.error : "Unknown Error"),
+                    icon: 'error'
+                }).then(() => logout());
+                return;
+            }
+            
+            vehicleData = Array.isArray(initialData.vehicles) ? initialData.vehicles : [];
+            
+            // ตรวจสอบสถานะเพื่อเลือกว่าจะแสดงหน้า Dashboard หรือหน้าคืนรถ
+            if (initialData.activeBooking) {
+                if (initialData.activeBooking.status === 'รอข้อมูลคืน') {
+                    showEditReturnModal(initialData.activeBooking.bookingId);
+                } else {
+                    renderReturnView(initialData.activeBooking);
+                }
+            } else {
+                renderDashboardView();
+            }
+        })
+        .withFailureHandler(function(error) {
+            endloader();
+            Swal.fire({ title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', icon: 'error' });
+        })
+        .getInitialData(currentUser.username);
+}
+
+        
+    // 2. ฟังก์ชันหน้า Dashboard (แก้ไขจุดคลิก)
+    function renderDashboardView() {
+    if (!vehicleData) {
+        $('#view-container').html(`<div class="dashboard-error"><h3>เกิดข้อผิดพลาด</h3><p>ไม่สามารถแสดงข้อมูลรถได้</p></div>`);
+        return;
+    }
+    
+    const defaultCarImage = "https://cdn-icons-png.flaticon.com/512/3202/3202926.png";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // ฟังก์ชันช่วยแปลงปี พ.ศ. และเช็คสถานะการแจ้งเตือน (สีแดงเมื่อเหลือน้อยกว่า 15 วัน)
+    const getExpirationStatus = (dateStr) => {
+        if (!dateStr || dateStr === '' || dateStr === '-') return { text: '-', isWarning: false };
+        
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1;
+            const year = parseInt(parts[2]);
+            const expireDate = new Date(year, month, day);
+            
+            const thaiDate = `${parts[0]}/${parts[1]}/${year + 543}`;
+            
+            // คำนวณส่วนต่างจำนวนวัน
+            const diffTime = expireDate.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            let statusText = thaiDate;
+            let isWarning = false;
+
+            if (diffDays < 0) {
+                statusText += " ‼️ หมดอายุแล้ว";
+                isWarning = true;
+            } else if (diffDays < 15) {
+                statusText += " ⚠️ ใกล้หมดอายุ";
+                isWarning = true;
+            }
+            
+            return { text: statusText, isWarning: isWarning };
+        }
+        return { text: dateStr, isWarning: false };
+    };
+
+    let vehicleCardsHTML = vehicleData.map(v => {
+        const displayImage = v.imageUrl ? v.imageUrl : defaultCarImage;
+        const isLowFuel = v.fuel <= 25; 
+        const fuelClass = isLowFuel ? 'low-fuel-card' : '';
+        const fuelTextClass = isLowFuel ? 'low-fuel-text' : '';
+        const fuelStatusText = isLowFuel ? '<i class="fa fa-gas-pump"></i> น้ำมันใกล้หมด!' : `น้ำมัน ${v.fuel}%`;
+
+        // ตรวจสอบสถานะ ภาษีรถ และ ประกัน
+        const actStatus = getExpirationStatus(v.actExpire);
+        const insStatus = getExpirationStatus(v.insExpire);
+
+        const expirationHTML = `
+            <div class="expiration-badge" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); color: white; padding: 5px 8px; border-radius: 8px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1.2;">
+                <div>
+                    <span class="exp-label" style="font-size: 0.45rem; color: #FBBF24; font-weight: bold;">ภาษีรถ (ทะเบียน)</span> 
+                    <span class="exp-date" style="font-size: 0.55rem; color: ${actStatus.isWarning ? '#FF4757' : '#FFFFFF'};">
+                        ${actStatus.text}
+                    </span>
+                </div>
+                <div>
+                    <span class="exp-label" style="font-size: 0.45rem; color: #FBBF24; font-weight: bold;">ประกัน</span> 
+                    <span class="exp-date" style="font-size: 0.55rem; color: ${insStatus.isWarning ? '#FF4757' : '#FFFFFF'};">
+                        ${insStatus.text}
+                    </span>
+                </div>
+            </div>`;
+
+        const infoDisplay = (!v.isAvailable && v.destination) 
+            ? `<div class="user-on-image" style="font-size: 0.85rem; line-height: 1.4; padding: 6px 5px;">
+                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #FFFFFF;">
+                    <i class="fa fa-map-marker-alt" style="color: #FF4757; width: 15px;"></i> ${v.destination}
+                </div>
+                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #FBBF24; font-size: 0.75rem;">
+                    <i class="fa fa-info-circle" style="width: 15px;"></i> ${v.purpose}
+                </div>
+               </div>` 
+            : '';
+
+        const buttonHTML = v.isAvailable ? 
+            `<button style="margin-top: 15px; ${isLowFuel ? 'background: linear-gradient(135deg, #FF4757 0%, #C0392B 100%);' : ''}">ขอใช้รถ</button>` : 
+            `<button disabled style="margin-top: 15px; background: #444; color: #ccc; cursor: default; box-shadow: none;">
+                <i class="fa fa-user"></i> ใช้งานโดย: ${v.currentUser || 'เจ้าหน้าที่'}
+             </button>`;
+
+        return `
+        <div class="vehicle-card ${v.isAvailable ? 'available' : 'unavailable'} ${fuelClass}" 
+             ${v.isAvailable ? `onclick="checkFuelBeforeForm('${v.name}', ${v.fuel})"` : ''}>
+            <div class="vehicle-image-container" style="position: relative;">
+                <img src="${displayImage}" alt="${v.name}" onerror="this.src='${defaultCarImage}'">
+                ${expirationHTML} 
+                ${infoDisplay}    
+                <div class="status-badge" style="top: 10px; right: 10px;">${v.isAvailable ? 'ว่าง' : 'ไม่ว่าง'}</div>
+            </div>
+            <div class="vehicle-content">
+                <h3>${v.name}</h3>
+                <div class="fuel-indicator">
+                    <div class="fuel-level" style="width: ${v.fuel}%; background: ${isLowFuel ? '#FF4757' : ''}"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="${fuelTextClass}">${fuelStatusText}</span>
+                    <span style="font-size: 0.8rem;"><i class="fa fa-tachometer-alt"></i> ${v.odometer.toLocaleString()} กม.</span>
+                </div>
+                ${buttonHTML}
+            </div>
+        </div>`;
+    }).join('');
+    
+    $('#view-container').html(`<div class="dashboard"><h2>ขอใช้รถ (สำหรับวันนี้)</h2><div class="vehicle-grid">${vehicleCardsHTML}</div></div>`);
+}
+
+
+
+
+        function checkFuelBeforeForm(vehicleName, fuel) {
+            isFuelRiskAccepted = (fuel <= 25);
+            if (fuel <= 25) {
+                Swal.fire({
+                    title: '<span style="color: #FF4757;">⚠️ แจ้งเตือนความเสี่ยง</span>',
+                    html: `<div style="color: #eee;">รถคันนี้มีน้ำมันเหลือเพียง <b>${fuel}%</b><br><br><b style="font-size: 1.2rem;">"คุณยอมรับความเสี่ยงน้ำมันหมดไหม?"</b></div>`,
+                    icon: 'warning',
+                    background: '#2D1B69',
+                    showCancelButton: true,
+                    confirmButtonText: 'ยอมรับและดำเนินการต่อ',
+                    cancelButtonText: 'ยกเลิก',
+                    backdrop: `rgba(0,0,0,0.6)`
+                }).then((result) => {
+                    if (result.isConfirmed) { renderRequestForm(vehicleName); }
+                });
+            } else {
+                renderRequestForm(vehicleName);
+            }
+        }
+
+        function handleRequestSubmit(vehicleName) {
+    const destination = $('#destination').val();
+    const driver = $('#driver').val();
+    const purposeInput = $('#purpose').val();
+    const passengers = $('#passengers').val();
+
+    if (!destination || destination.trim() === '' || !purposeInput || purposeInput.trim() === '') {
+        Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+        return;
+    }
+
+    const now = new Date();
+    const departureTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    
+    const data = {
+        username: currentUser.username,
+        vehicleName: vehicleName,
+        departureTime: departureTime,
+        destination: destination.trim(),
+        driver: driver.trim(),
+        purpose: purposeInput.trim(),
+        passengers: passengers.trim()
+    };
+
+    showModernSpinner("กำลังบันทึกข้อมูล...", "โปรดรอสักครู่");
+    
+    google.script.run
+        .withSuccessHandler(function(response) {
+            hideModernSpinner();
+            if (response && response.success) {
+                Swal.fire({ 
+                    title: 'บันทึกสำเร็จ!', 
+                    icon: 'success',
+                    timer: 1000,
+                    showConfirmButton: false 
+                }).then(() => { 
+                    // แทนการใช้ location.reload() ให้เรียกฟังก์ชันดึงข้อมูลใหม่เพื่อเข้าหน้าคืนรถทันที
+                    afterLoginSuccess(currentUser.username); 
+                });
+            } else {
+                Swal.fire('เกิดข้อผิดพลาด', response.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+            }
+        })
+        .withFailureHandler(function(error) {
+            hideModernSpinner();
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+        })
+        .requestVehicle(data);
+}
+
+
+        // 3. ฟังก์ชันแจ้งเตือนทันทีที่คลิก
+        function checkFuelBeforeForm(vehicleName, fuel) {
+            if (fuel <= 25) {
+                Swal.fire({
+                    title: '<span style="color: #FF4757;">⚠️ แจ้งเตือนความเสี่ยง</span>',
+                    html: `<div style="color: #eee;">รถคันนี้มีน้ำมันเหลือเพียง <b>${fuel}%</b><br><br><b style="font-size: 1.2rem;">"คุณยอมรับความเสี่ยงน้ำมันหมดไหม?"</b></div>`,
+                    icon: 'warning',
+                    background: '#2D1B69',
+                    showCancelButton: true,
+                    confirmButtonColor: '#FF4757',
+                    cancelButtonColor: '#718096',
+                    confirmButtonText: 'ยอมรับและดำเนินการต่อ',
+                    cancelButtonText: 'เปลี่ยนใจเลือกคันอื่น',
+                    backdrop: `rgba(0,0,0,0.6)`
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        isFuelRiskAccepted = true; // บันทึกว่าผู้ใช้ยอมรับความเสี่ยงแล้ว
+                        renderRequestForm(vehicleName);
+                    }
+                });
+            } else {
+                isFuelRiskAccepted = false; // น้ำมันปกติ ไม่ต้องบันทึกสถานะเสี่ยง
+                renderRequestForm(vehicleName);
+            }
+        }
+
+
+
+
+        function renderRequestForm(vehicleName) {
+            const vehicle = vehicleData.find(v => v.name === vehicleName);
+            const currentFuel = vehicle.fuel; // ดึงค่าน้ำมันของรถคันที่เลือกมาเตรียมไว้ 
+
+            $('#view-container').html(`
+                <div class="form-container">
+                    <h2>ขอใช้รถ: ${vehicle.name}</h2>
+                    <p>ทะเบียน: ${vehicle.licensePlate} | เลขไมล์ปัจจุบัน: ${vehicle.odometer} กม.</p>
+                    <div class="form-field"><label>สถานที่ไป</label><input type="text" id="destination" placeholder="ระบุจุดหมายปลายทาง"></div>
+                    <div class="form-field"><label>ไปเพื่อ</label><input type="text" id="purpose" placeholder="ระบุวัตถุประสงค์การเดินทาง"></div>
+                    <div class="form-field"><label>มีคนนั่ง (รวมคนขับ)</label><input type="number" id="passengers" placeholder="ระบุจำนวนผู้โดยสาร" min="1" value="1"></div>
+                    <div class="form-field">
+                        <label>พนักงานขับรถ</label>
+                        <div class="input-with-button">
+                            <input type="text" id="driver" value="${currentUser.fullName}" readonly>
+                            <button class="btn-edit" onclick="$('#driver').prop('readonly', false).focus()">แก้ไข</button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="secondary" onclick="renderDashboardView()">ยกเลิก</button>
+                        <button class="btn-submit" onclick="handleRequestSubmit('${vehicle.name}')">บันทึกการขอใช้</button>
+                    </div>
+                </div>`);
+        }
+
+
+
+        function renderReturnView(booking) {
+    if (!booking) { renderDashboardView(); return; }
+    
+    // ดึงค่าน้ำมันล่าสุดจากระบบเพื่อใช้เป็นค่าเริ่มต้น
+    const currentFuel = booking.fuel || 50; 
+    
+    $('#view-container').html(`
+        <div class="return-container">
+            <h2><i class="fa-solid fa-key"></i> คืนรถ</h2>
+            <p>คุณมีรายการใช้รถที่ยังไม่คืน: <strong>${booking.vehicleName} (${booking.licensePlate})</strong></p>
+            <p>เลขไมล์ตอนออก: ${booking.odometerOut.toLocaleString()} กม.</p>
+            
+            <div class="form-field">
+                <label for="odometerIn">เลขไมล์กลับ (กม.)</label>
+                <input type="number" id="odometerIn" placeholder="กรอกเลขไมล์ล่าสุดบนหน้าปัดรถ">
+            </div>
+            
+            <div class="form-field">
+                <label for="fuelLevel">ระดับน้ำมันคงเหลือ (%)</label>
+                <div class="range-slider">
+                    <input type="range" id="fuelLevel" min="0" max="100" 
+                           value="${currentFuel}" 
+                           data-initial-fuel="${currentFuel}" 
+                           oninput="$('#fuel-value').text(this.value)">
+                    <span id="fuel-value">${currentFuel}</span>%
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button class="secondary" onclick="renderDashboardView()">กลับหน้าหลัก</button>
+                <button class="btn-submit" onclick="handleReturnSubmit('${booking.bookingId}')">
+                    บันทึกการคืนรถ
+                </button>
+            </div>
+        </div>
+    `);
+}
+
+        function showEditReturnModal(bookingId) {
+            startloader("กำลังโหลดข้อมูล...");
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    endloader();
+                    if (!response || typeof response !== 'object') {
+                        Swal.fire('เกิดข้อผิดพลาด', 'ได้รับข้อมูลไม่ถูกต้องจากเซิร์ฟเวอร์', 'error');
+                        return;
+                    }
+                    if (response.success === false || !response.success) {
+                        Swal.fire('เกิดข้อผิดพลาด', response.message || 'ไม่สามารถโหลดข้อมูลได้', 'error');
+                        return;
+                    }
+                    
+                    const data = response.data || {};
+                    let returnTime = '';
+                    if (data.returnTime && data.returnTime !== '') {
+                        returnTime = data.returnTime;
+                    } else {
+                        const now = new Date();
+                        returnTime = now.getHours().toString().padStart(2, '0') + ':' + 
+                                   now.getMinutes().toString().padStart(2, '0');
+                    }
+                    
+                    const destination = data.destination || '';
+                    const purpose = data.purpose || '';
+                    
+                    const modalHtml = `
+                        <div class="modal-overlay" id="edit-modal">
+                            <div class="modal-content">
+                                <h3><i class="fa fa-edit"></i> แก้ไขการใช้รถ หากไม่แก้ กดบันทึก</h3>
+                                <div class="form-field">
+                                    <label for="edit-destination">สถานที่ไป</label>
+                                    <input type="text" id="edit-destination" value="${destination}" placeholder="ระบุจุดหมายปลายทาง">
+                                </div>
+                                <div class="form-field">
+                                    <label for="edit-purpose">วัตถุประสงค์ (ไปเพื่อ)</label>
+                                    <input type="text" id="edit-purpose" value="${purpose}" placeholder="ระบุวัตถุประสงค์">
+                                </div>
+                                <div class="form-field">
+                                    <label for="edit-return-time">เวลากลับ (รูปแบบ 24 ชม.)</label>
+                                    <input type="text" id="edit-return-time" value="${returnTime}" 
+                                           placeholder="16:30"
+                                           pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$" 
+                                           maxlength="5"
+                                           style="text-align: center; font-size: 1.2rem; letter-spacing: 2px;">
+                                    <small style="color: rgba(255,255,255,0.6); display: block; margin-top: 5px;">
+                                        <i class="fa fa-info-circle"></i> กรุณากรอก <strong>HH:MM</strong> (มี : คั่น) เช่น <strong>16:25</strong>
+                                    </small>
+                                </div>
+                                <div class="modal-actions">
+                                    <button class="secondary" onclick="closeEditModal()">
+                                        <i class="fa fa-times"></i> ยกเลิก
+                                    </button>
+                                    <button class="btn-submit" onclick="saveEditedReturn('${bookingId}')">
+                                        <i class="fa fa-check"></i> บันทึก
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $('#edit-modal').remove();
+                    $('body').append(modalHtml);
+                    setTimeout(function() {
+                        $('#edit-modal').addClass('show');
+                    }, 50);
+                })
+                .withFailureHandler(function(error) {
+                    endloader();
+                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้: ' + error.message, 'error');
+                })
+                .getBookingDetails(bookingId);
+        }
+
+        function closeEditModal() {
+            $('#edit-modal').removeClass('show');
+            setTimeout(() => {
+                $('#edit-modal').remove();
+            }, 300);
+        }
+
+        function saveEditedReturn(bookingId) {
+            const destination = $('#edit-destination').val().trim();
+            const purpose = $('#edit-purpose').val().trim();
+            const returnTime = $('#edit-return-time').val();
+            
+            if (!destination || !purpose || !returnTime) {
+                Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+                return;
+            }
+            
+            const data = {
+                bookingId: bookingId,
+                destination: destination,
+                purpose: purpose,
+                returnTime: returnTime
+            };
+
+            showModernSpinner("กำลังบันทึกข้อมูล...", "โปรดรอสักครู่");
+            
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    hideModernSpinner();
+                    if (response.success) {
+                        closeEditModal();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'คืนรถสำเร็จ!',
+                            text: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+                            confirmButtonText: 'ตกลง'
+                        }).then(() => {
+                            if (appUrl) {
+                                window.top.location.href = appUrl;
+                            } else {
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        Swal.fire('เกิดข้อผิดพลาด', response.message, 'error');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    hideModernSpinner();
+                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+                })
+                .updateBookingBeforeReturn(data);
+        }
+
+        $(document).on('click', '.modal-overlay', function(e) {
+            if ($(e.target).hasClass('modal-overlay')) {
+                closeEditModal();
+            }
+        });
+
+
+          function validateBeforeSubmit(vehicleName, fuel) {
+            const destination = $('#destination').val().trim();
+            const purpose = $('#purpose').val().trim();
+            const driver = $('#driver').val().trim();
+            const passengers = $('#passengers').val().trim();
+
+            if (!destination || !purpose || !driver || !passengers) {
+                Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+                return;
+            }
+
+            // เงื่อนไขน้ำมันเหลือต่ำกว่าหรือเท่ากับ 25% จะแสดง Alert ยอมรับความเสี่ยง 
+            if (fuel <= 25) {
+                Swal.fire({
+                    title: '<span style="color: #FF4757;">⚠️ คำเตือน: น้ำมันเหลือน้อย</span>',
+                    html: `<div style="color: #eee;">รถคันนี้มีน้ำมันเหลือเพียง <b>${fuel}%</b><br><br><b style="font-size: 1.2rem;">"คุณยอมรับความเสี่ยงน้ำมันหมดไหม?"</b></div>`,
+                    icon: 'warning',
+                    background: '#2D1B69',
+                    showCancelButton: true,
+                    confirmButtonColor: '#FF4757',
+                    cancelButtonColor: '#718096',
+                    confirmButtonText: 'ยอมรับความเสี่ยงและใช้งาน',
+                    cancelButtonText: 'ยกเลิก',
+                    backdrop: `rgba(0,0,123,0.4)`
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        handleRequestSubmit(vehicleName); // กดยอมรับแล้วค่อยไปทำงานต่อที่ฟังก์ชันส่งข้อมูล 
+                    }
+                });
+            } else {
+                handleRequestSubmit(vehicleName); // ถ้าน้ำมันปกติ บันทึกได้ทันที 
+            }
+        }
+
+
+        
+
+        function proceedWithReturn(bookingId) {
+            const odometerIn = $('#odometerIn').val().trim();
+            const fuelLevel = $('#fuelLevel').val();
+
+            const data = {
+                bookingId: bookingId,
+                odometerIn: odometerIn,
+                fuelLevel: fuelLevel
+            };
+
+            startloader("กำลังบันทึกข้อมูลการคืนรถ...");
+
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    endloader();
+                    if (response.success) {
+                        showEditReturnModal(bookingId);
+                    } else {
+                        Swal.fire('เกิดข้อผิดพลาด', response.message, 'error');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    endloader();
+                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+                })
+                .returnVehicle(data);
+        }
+
+        function handleReturnSubmit(bookingId) {
+    const odometerIn = $('#odometerIn').val().trim();
+    const fuelLevel = $('#fuelLevel').val();
+    // ดึงค่าเริ่มต้นที่เราใส่ไว้ใน data-initial-fuel มาเทียบ
+    const initialFuel = $('#fuelLevel').data('initial-fuel');
+
+    if (!odometerIn || isNaN(odometerIn) || Number(odometerIn) <= 0) {
+        Swal.fire('ข้อมูลไม่ถูกต้อง', 'กรุณากรอกเลขไมล์กลับให้ถูกต้อง', 'warning');
+        return;
+    }
+
+    // ถ้าค่าปัจจุบัน (ที่อาจจะเลื่อนหรือไม่เลื่อน) ตรงกับค่าเริ่มต้น ให้ถามย้ำ
+    if (String(fuelLevel) === String(initialFuel)) {
+        Swal.fire({
+            title: 'ยังไม่ได้ปรับระดับน้ำมัน',
+            text: 'ระดับน้ำมันยังอยู่ที่ค่าเดิมตอนรับรถ คุณต้องการยืนยันการคืนรถใช่หรือไม่?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#00C896',
+            cancelButtonColor: '#718096',
+            confirmButtonText: 'ใช่, ยืนยัน',
+            cancelButtonText: 'กลับไปแก้ไข'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                proceedWithReturn(bookingId);
+            }
+        });
+    } else {
+        proceedWithReturn(bookingId);
+    }
+}
+
+        $(document).ready(function() {
+            google.script.run.withSuccessHandler(function(url) { appUrl = url; }).getAppUrl();
+            
+            const rememberedIdCard = localStorage.getItem('rememberedIdCard');
+            if (rememberedIdCard) {
+                startloader("กำลังเข้าสู่ระบบอัตโนมัติ...");
+                google.script.run
+                    .withSuccessHandler(function(output) {
+                        if (output) { 
+                            afterLoginSuccess(output); 
+                        } else { 
+                            localStorage.removeItem('rememberedIdCard'); 
+                            showLoginForm(); 
+                        }
+                    })
+                    .withFailureHandler(showLoginForm)
+                    .getUserDataByIdCard(rememberedIdCard);
+            } else {
+                showLoginForm();
+            }
+        });
+
+        function showLoginForm() {
+            endloader();
+            $('#login-container').fadeIn();
+        }
+
+        function toggleReportMenu() {
+            $('#report-dropdown').toggleClass('show');
+        }
+
+        $(document).click(function(event) {
+            if (!$(event.target).closest('.report-menu-container').length) {
+                $('#report-dropdown').removeClass('show');
+            }
+        });
+
+        function showUsageReport() {
+            $('#report-dropdown').removeClass('show');
+            startloader("กำลังโหลดข้อมูล...");
+            google.script.run.withSuccessHandler(function(vehicles) {
+                endloader();
+                const today = new Date();
+                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                const vehicleOptions = '<option value="all">รถทุกคัน</option>' +
+                    vehicles.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+                
+                $('#view-container').html(`
+                    <div class="report-container">
+                        <h2><i class="fa fa-file-text" style="margin-right: 10px;"></i>บันทึกการใช้รถยนต์</h2>
+                        <div class="report-filters">
+                            <div class="filter-row">
+                                <div class="form-field">
+                                    <label for="filter-vehicle">เลือกรถยนต์</label>
+                                    <select id="filter-vehicle" class="form-control">${vehicleOptions}</select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="filter-month">เลือกเดือน</label>
+                                    <select id="filter-month" class="form-control" onchange="updateDatesFromMonth()">
+                                        <option value="">-- เลือกเดือน --</option>
+                                        ${["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"].map((m, i) => `<option value="${i}">${m}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="start-date">วันที่เริ่มต้น</label>
+                                    <input type="date" id="start-date" class="form-control" value="${formatDate(firstDay)}">
+                                </div>
+                                <div class="form-field">
+                                    <label for="end-date">วันที่สิ้นสุด</label>
+                                    <input type="date" id="end-date" class="form-control" value="${formatDate(today)}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="report-actions">
+                            <button class="secondary" onclick="renderDashboardView()"><i class="fa fa-arrow-left"></i> กลับหน้าหลัก</button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="print-btn" onclick="exportToExcelFromReport()"><i class="fa fa-file-excel"></i> พิมพ์ออก Excel</button>
+                                <button class="pdf-btn" onclick="exportToPdfFromReport()"><i class="fa fa-file-pdf"></i> พิมพ์ออก PDF</button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }).getVehiclesList();
+        }
+
+        function showPermitReport() {
+            $('#report-dropdown').removeClass('show');
+            startloader("กำลังเตรียมหน้าพิมพ์ใบอนุญาต...");
+            google.script.run.withSuccessHandler(function(vehicles) {
+                endloader();
+                let vehicleOptions = '<option value="all">รถทุกคัน</option>';
+                if (Array.isArray(vehicles)) {
+                    vehicles.forEach(v => { vehicleOptions += `<option value="${v.name}">${v.name}</option>`; });
+                }
+
+                let monthOptions = '<option value="">-- ทุกเดือน --</option>';
+                const today = new Date();
+                const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+                for (let i = 0; i < 12; i++) {
+                    let date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                    let monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    let monthText = `${thaiMonths[date.getMonth()]} ${date.getFullYear() + 543}`;
+                    monthOptions += `<option value="${monthKey}" ${i === 0 ? 'selected' : ''}>${monthText}</option>`;
+                }
+
+                $('#view-container').html(`
+                    <div class="report-container">
+                        <h2><i class="fa fa-print" style="margin-right: 10px;"></i>พิมพ์ใบอนุญาตใช้รถ</h2>
+                        <div class="report-filters">
+                            <div class="filter-row">
+                                <div class="form-field">
+                                    <label for="permit-filter-vehicle">เลือกรถยนต์</label>
+                                    <select id="permit-filter-vehicle" class="form-control" onchange="loadPermitReportData()">${vehicleOptions}</select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="permit-filter-month">เลือกเดือน</label>
+                                    <select id="permit-filter-month" class="form-control" onchange="loadPermitReportData()">${monthOptions}</select>
+                                </div>
+                                <div class="form-field" style="display: flex; align-items: flex-end;">
+                                     <button class="pdf-btn" onclick="printAllPendingPermits()" style="width: 100%;">
+                                        <i class="fa fa-print"></i> สั่งพิมพ์ทั้งหมด (ที่เหลือ)
+                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>วันที่/เวลา</th>
+                                    <th>รถยนต์ (ทะเบียน)</th>
+                                    <th>ผู้ขอใช้</th>
+                                    <th>สถานที่ไป</th>
+                                    <th style="text-align: center;">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permit-table-body"></tbody>
+                        </table>
+                        <div class="report-actions">
+                            <button class="secondary" onclick="renderDashboardView()"><i class="fa fa-arrow-left"></i> กลับหน้าหลัก</button>
+                        </div>
+                    </div>
+                `);
+                loadPermitReportData();
+            }).getVehiclesList();
+        }
+
+        function loadPermitReportData() {
+            startloader("กำลังค้นหาข้อมูล...");
+            const vehicleName = $('#permit-filter-vehicle').val();
+            const monthValue = $('#permit-filter-month').val();
+            let startDate = null, endDate = null;
+            if (monthValue) {
+                const [year, month] = monthValue.split('-').map(Number);
+                startDate = new Date(year, month - 1, 1);
+                endDate = new Date(year, month, 0);
+            }
+
+            const filters = {
+                status: 'คืนแล้ว',
+                vehicleName: vehicleName,
+                startDate: startDate ? formatDate(startDate) : null,
+                endDate: endDate ? formatDate(endDate) : null
+            };
+
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    endloader();
+                    if (!response || !response.success || !Array.isArray(response.data)) {
+                        $('#permit-table-body').html(`<tr><td colspan="5" style="text-align:center; padding: 20px;">ไม่พบข้อมูล</td></tr>`);
+                        return;
+                    }
+
+                    let tableRows = response.data.length === 0 ? 
+                        `<tr><td colspan="5" style="text-align:center; padding: 20px;">ไม่พบข้อมูลตามเงื่อนไข</td></tr>` : 
+                        response.data.map(item => `
+                            <tr>
+                                <td>${item.bookingDate || '-'}</td>
+                                <td>${item.vehicleName || '-'}</td>
+                                <td>${item.fullName || '-'}</td>
+                                <td>${item.destination || '-'}</td>
+                                <td style="text-align: center;">
+                                    <button onclick="printPermit('${item.bookingId}', this)" 
+                                    style="font-size: 0.9rem; padding: 8px 12px; 
+                                    background: ${item.printStatus === 'พิมพ์แล้ว' ? '#0066CC' : ''}"> <i class="fa ${item.printStatus === 'พิมพ์แล้ว' ? 'fa-sync-alt' : 'fa-print'}"></i> 
+                                    ${item.printStatus === 'พิมพ์แล้ว' ? 'พิมพ์ซ้ำ' : 'พิมพ์'} </button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    $('#permit-table-body').html(tableRows);
+                })
+                .getVehiclePermitReport(filters);
+        }
+
+        function exportToExcelFromReport() {
+            const filters = {
+                vehicleName: $('#filter-vehicle').val(),
+                startDate: $('#start-date').val(),
+                endDate: $('#end-date').val()
+            };
+            if (!filters.startDate || !filters.endDate) {
+                Swal.fire('กรุณาเลือกวันที่', 'ระบุวันที่เริ่มต้นและสิ้นสุด', 'warning');
+                return;
+            }
+            startloader("กำลังสร้างไฟล์ Excel...");
+            google.script.run.withSuccessHandler(function(response) {
+                endloader();
+                if (response.success) {
+                    window.open(response.fileUrl, '_blank');
+                } else {
+                    Swal.fire('เกิดข้อผิดพลาด', response.message, 'error');
+                }
+            }).exportUsageReportToExcel(filters);
+        }
+
+        function exportToPdfFromReport() {
+            const filters = {
+                vehicleName: $('#filter-vehicle').val(),
+                startDate: $('#start-date').val(),
+                endDate: $('#end-date').val()
+            };
+            if (!filters.startDate || !filters.endDate) {
+                Swal.fire('กรุณาเลือกวันที่', 'ระบุวันที่เริ่มต้นและสิ้นสุด', 'warning');
+                return;
+            }
+            startloader("กำลังสร้างไฟล์ PDF...");
+            google.script.run.withSuccessHandler(function(response) {
+                endloader();
+                if (response.success) {
+                    window.open(response.fileUrl, '_blank');
+                } else {
+                    Swal.fire('เกิดข้อผิดพลาด', response.message, 'error');
+                }
+            }).exportUsageReportToPDF(filters);
+        }
+
+        function printPermit(bookingId, btnElement) {
+            $(btnElement).html('<i class="fa fa-spinner fa-spin"></i>').prop('disabled', true);
+            startloader("กำลังสร้างไฟล์ PDF...");
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    endloader();
+                    if (response.success) {
+                        window.open(response.pdfUrl, '_blank');
+                        $(btnElement).html('<i class="fa fa-check"></i> พิมพ์แล้ว').css({'background': '#6c757d', 'cursor': 'default'}).prop('disabled', false);
+                    } else {
+                        Swal.fire('เกิดข้อผิดพลาด', response.message, 'error');
+                    }
+                })
+                .createPermitPdf(bookingId);
+        }
+
+        function updateDatesFromMonth() {
+            const monthValue = $('#filter-month').val();
+            if (monthValue === "") return;
+            const year = new Date().getFullYear();
+            const startDate = new Date(year, parseInt(monthValue), 1);
+            const endDate = new Date(year, parseInt(monthValue) + 1, 0);
+            $('#start-date').val(formatDate(startDate));
+            $('#end-date').val(formatDate(endDate));
+        }
+
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function showModernSpinner(mainText = "กำลังประมวลผล...", subText = "") {
+    $('#modern-spinner').remove();
+    const spinnerHtml = `
+        <div class="modern-spinner-overlay" id="modern-spinner" style="display:flex;">
+            <div class="spinner-container">
+                <div class="modern-spinner">
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                </div>
+                <div class="spinner-text" style="color: white; margin-top: 20px;">${mainText}</div>
+                ${subText ? `<div class="spinner-subtext" style="color: rgba(255,255,255,0.7);">${subText}</div>` : ''}
+            </div>
+        </div>
+    `;
+    $('body').append(spinnerHtml);
+    // บังคับให้แสดงผลทันที
+    $('#modern-spinner').fadeIn(200).addClass('show');
+}
+
+
+        function hideModernSpinner() {
+            $('#modern-spinner').removeClass('show');
+            setTimeout(() => { $('#modern-spinner').remove(); }, 300);
+        }
+
+        function printAllPendingPermits() {
+            const vehicleName = $('#permit-filter-vehicle').val();
+            const monthValue = $('#permit-filter-month').val();
+            if ($('#permit-table-body td').length <= 1) {
+                Swal.fire('ไม่มีรายการ', 'ไม่พบรายการที่สามารถพิมพ์ได้', 'warning');
+                return;
+            }
+
+            let startDate = null, endDate = null;
+            if (monthValue) {
+                const [year, month] = monthValue.split('-').map(Number);
+                startDate = new Date(year, month - 1, 1);
+                endDate = new Date(year, month, 0);
+            }
+
+            const filters = {
+                vehicleName: vehicleName,
+                startDate: startDate ? formatDate(startDate) : null,
+                endDate: endDate ? formatDate(endDate) : null
+            };
+
+            Swal.fire({
+                title: 'ยืนยันการพิมพ์ทั้งหมด?',
+                text: "ระบบจะรวมใบอนุญาตที่ 'ยังไม่ได้พิมพ์' ทั้งหมดเป็นไฟล์ PDF เดียว",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยัน',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showModernSpinner("กำลังรวมไฟล์ PDF...", "โปรดรอสักครู่");
+                    google.script.run
+                        .withSuccessHandler(function(response) {
+                            hideModernSpinner();
+                            if (response.success) {
+                                Swal.fire('เสร็จเรียบร้อย!', response.message, 'success').then(() => {
+                                    window.open(response.fileUrl, '_blank');
+                                    loadPermitReportData();
+                                });
+                            } else {
+                                Swal.fire('แจ้งเตือน', response.message, 'warning');
+                            }
+                        })
+                        .batchCreatePermitPdfs(filters);
+                }
+            });
+        }
+
+    // แก้ไขฟังก์ชัน showVehicleSettings ในไฟล์ index2.txt
+function showVehicleSettings() {
+    // ปิดเมนู Dropdown ก่อน
+    $('#report-dropdown').removeClass('show');
+
+    // --- ส่วนที่เพิ่ม: รหัสป้องกันการเข้าถึง ---
+    Swal.fire({
+        title: 'สำหรับเจ้าหน้าที่ดูแล',
+        text: 'กรุณากรอกรหัสผ่านเพื่อตั้งค่าข้อมูล',
+        input: 'password', // ใช้ input type password เพื่อความปลอดภัย
+        inputAttributes: {
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'ตกลง',
+        cancelButtonText: 'ยกเลิก',
+        background: '#2D1B69',
+        color: '#fff',
+        confirmButtonColor: '#7C3AED'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // ตรวจสอบรหัสผ่านที่ผู้ใช้กรอก (ต้องเป็นเลข 9)
+            if (result.value === '9') {
+                startloader("กำลังโหลดข้อมูลรถ...");
+                google.script.run.withSuccessHandler(function(vehicles) {
+                    endloader();
+                    let options = vehicles.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+                    
+                    $('#view-container').html(`
+                        <div class="form-container">
+                            <h2><i class="fa fa-cog"></i> ตั้งค่าวันหมดอายุ ภาษีรถ/ประกันภัย</h2>
+                            <div class="form-field">
+                                <label>เลือกรถที่ต้องการตั้งค่า</label>
+                                <select id="setting-vehicle-select" onchange="loadCurrentExpirations(this.value)">
+                                    <option value="">-- เลือกรถ --</option>
+                                    ${options}
+                                </select>
+                            </div>
+                            <div id="expiration-inputs" style="display:none;">
+                                <div class="form-field">
+                                    <label>วันหมดอายุ ภาษีรถ</label>
+                                    <input type="date" id="new-act-date">
+                                </div>
+                                <div class="form-field">
+                                    <label>วันหมดอายุประกันภัย</label>
+                                    <input type="date" id="new-ins-date">
+                                </div>
+                                <div class="form-actions">
+                                    <button class="secondary" onclick="renderDashboardView()">ยกเลิก</button>
+                                    <button class="btn-submit" onclick="saveExpirations()">บันทึกข้อมูล</button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }).getVehiclesList();
+            } else {
+                // กรณีรหัสผ่านไม่ถูกต้อง
+                Swal.fire({
+                    icon: 'error',
+                    title: 'รหัสผ่านไม่ถูกต้อง',
+                    text: 'คุณไม่มีสิทธิ์เข้าใช้งานเมนูนี้',
+                    confirmButtonColor: '#DC2626'
+                });
+            }
+        }
+    });
+}
+
+
+
+function loadCurrentExpirations(vehicleName) {
+    if (!vehicleName) { $('#expiration-inputs').hide(); return; }
+    startloader("กำลังดึงข้อมูลวันที่...");
+    google.script.run.withSuccessHandler(function(res) {
+        endloader();
+        if (res.success) {
+            $('#new-act-date').val(res.actExpire);
+            $('#new-ins-date').val(res.insExpire);
+            $('#expiration-inputs').fadeIn();
+        }
+    }).getVehicleExpirationData(vehicleName);
+}
+
+function saveExpirations() {
+    const data = {
+        vehicleName: $('#setting-vehicle-select').val(),
+        actExpire: $('#new-act-date').val(),
+        insExpire: $('#new-ins-date').val()
+    };
+    
+    showModernSpinner("กำลังบันทึกข้อมูล...");
+    google.script.run.withSuccessHandler(function(res) {
+        hideModernSpinner();
+        if (res.success) {
+            Swal.fire('สำเร็จ', res.message, 'success').then(() => renderDashboardView());
+        } else {
+            Swal.fire('ผิดพลาด', res.message, 'error');
+        }
+    }).updateVehicleExpirations(data);
+}
+
+
+// เพิ่มฟังก์ชันนี้ลงในไฟล์ index2.txt เพื่อแก้ปัญหาหน้าจอขาว
+function renderReturnVehicleView() {
+    startloader("กำลังโหลดข้อมูลการคืนรถ...");
+    google.script.run.withSuccessHandler(function(data) {
+        endloader();
+        if (!data || data.length === 0) {
+            $('#view-container').html(`
+                <div class="dashboard-error">
+                    <i class="fa fa-check-circle" style="font-size: 50px; color: #10B981; margin-bottom: 20px;"></i>
+                    <h3>ไม่มีรถที่ต้องคืน</h3>
+                    <p>ขณะนี้ไม่มีรถคันใดที่ถูกใช้งานในชื่อของคุณ</p>
+                    <button class="btn-submit" onclick="renderDashboardView()" style="margin-top:20px;">กลับหน้าหลัก</button>
+                </div>
+            `);
+            return;
+        }
+
+        let returnCardsHTML = data.map(v => `
+            <div class="vehicle-card unavailable">
+                <div class="vehicle-image-container">
+                    <img src="${v.imageUrl || 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png'}" alt="${v.name}">
+                    <div class="status-badge" style="top: 10px; right: 10px; background: #EF4444;">กำลังใช้งาน</div>
+                </div>
+                <div class="vehicle-content">
+                    <h3>${v.name}</h3>
+                    <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 10px;">
+                        <i class="fa fa-map-marker-alt"></i> ไปที่: ${v.destination}
+                    </p>
+                    <button class="btn-submit" onclick="showReturnForm('${v.name}', ${v.startOdometer})" style="background: #10B981;">
+                        <i class="fa fa-undo"></i> คืนรถยนต์
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        $('#view-container').html(`
+            <div class="dashboard">
+                <h2>รายการคืนรถยนต์</h2>
+                <div class="vehicle-grid">${returnCardsHTML}</div>
+            </div>
+        `);
+    }).getUserActiveBookings();
+}
+
+
+
+    </script>
+</body>
+</html>
