@@ -1,0 +1,54 @@
+<section id="drop" style="background-color: #00000099; display:none">
+  <nav id="nav1" class="navbar navbar-light fixed-top nav-box shadow col-md-12">
+    <div class="container" style="vertical-align: middle; color:#fff; font-size:2.0rem">
+      <div class="d-flex justify-content-center">
+        <img id="logo_pic1" src="https://i.ibb.co/pWcr7KD/logo.png" width="45" height="45" class="brand me-1">
+        <h5 class="navbar-brand me-auto ms-lg-0 fw-bold"><font color='#056f00'> ระบบขออนุญาตใช้รถยนต์</font></h5>
+      </div>
+      <div class="d-flex">
+        <div class="dropdown mt-1" id="drop1">
+          <button class="btn btn-outline-dark rounded-pill text-white dropdown-toggle" type="button" id="profile" data-bs-toggle="dropdown">
+            <i class="fa-regular fa-circle-user pe-2"></i>
+            <span class="fs-6 text-primary" id="user_log"></span>
+          </button>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="usecar()">ต้องการใช้รถ</a></li>
+            <li><a class="dropdown-item" href="#" onclick="returncar()">ต้องการคืนรถ</a></li>
+            <li><a class="dropdown-item" href="#" onclick="reLoad_Page()">Logout</a></li>
+          </ul>
+        </div>
+        <button id="btn-home2" class="btn btn-warning icon-small mx-2 border-0" onclick="reLoad_Page()" style="display: none;">
+          <i class="fa fa-home"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+</section>
+<br><br><br>
+
+<script>
+  // ===============================================
+  // ## ส่วนที่แก้ไข: ปรับปรุงฟังก์ชัน reLoad_Page ##
+  // ===============================================
+  function reLoad_Page() {
+    // 1. ลบข้อมูลผู้ใช้ออกจาก localStorage เพื่อให้แน่ใจว่าออกจากระบบสมบูรณ์
+    localStorage.removeItem('rememberedUser');
+    
+    // 2. สั่งให้เบราว์เซอร์รีโหลดหน้าเว็บปัจจุบัน
+    location.reload();
+  }
+
+  function usecar() {
+    // ซ่อนหน้าจออื่นและแสดงฟอร์มขอใช้รถ
+    $('#p3').hide(); // ซ่อนตารางคืนรถ
+    $('#dashboard-container').hide(); // ซ่อนแดชบอร์ด
+    $('#p1').show(); // แสดงฟอร์มขอใช้
+  }
+
+  function returncar() {
+    // ซ่อนหน้าจออื่นและแสดงตารางคืนรถ
+    $('#p1').hide(); // ซ่อนฟอร์มขอใช้
+    $('#dashboard-container').hide(); // ซ่อนแดชบอร์ด
+    $('#p3').show(); // แสดงตารางคืนรถ
+  }
+</script>
